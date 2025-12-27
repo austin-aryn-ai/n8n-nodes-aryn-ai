@@ -59,7 +59,7 @@ export class Aryn implements INodeType {
 				type: 'string',
 				default: 'data',
 				required: true,
-				placeholder: 'e.g data',
+				placeholder: 'e.g data or File',
 				hint: 'The name of the input binary field containing the file to be extracted',
 			},
 			{
@@ -76,12 +76,6 @@ export class Aryn implements INodeType {
 						action: "auto"
 					},
 					{
-						name: "Inline",
-						value: "inline_fallback_to_ocr",
-						description: "Let Aryn decide the best text extraction method",
-						action: "inline_fallback_to_ocr"
-					},
-					{
 						name: "OCR Standard",
 						value: "ocr_standard",
 						description: "Use Optical Character Recognition to extract text",
@@ -94,6 +88,81 @@ export class Aryn implements INodeType {
 						action: "ocr_vision"
 					}
 				],
+			},
+			{
+				displayName: "Table Mode",
+				name: "tableMode",
+				type: "options",
+				default: "none",
+				noDataExpression: true,
+				options: [
+					{
+						name: "None",
+						value: "none",
+						description: "Do not extract tables",
+						action: "none"
+					},
+					{
+						name: "Standard",
+						value: "standard",
+						description: "Use standard table extraction",
+						action: "standard"
+					},
+					{
+						name: "Vision",
+						value: "vision",
+						description: "Use a vision language model to enhance table extraction",
+						action: "vision"
+					}
+				],
+			},
+			{
+				displayName: "Output Format",
+				name: "outputFormat",
+				type: "options",
+				default: "json",
+				noDataExpression: true,
+				options: [
+					{
+						name: "JSON",
+						value: "json",
+						description: "Receive the output in JSON format",
+						action: "json"
+					},
+					{
+						name: "HTML",
+						value: "html",
+						description: "Receive the output in HTML format",
+						action: "html"
+					},
+					{
+						name: "Markdown",
+						value: "markdown",
+						description: "Receive the output in Markdown format",
+						action: "markdown"
+					}
+				],
+			},
+			{
+				displayName: "Extract Images",
+				name: "extractImages",
+				type: "boolean",
+				default: false,
+				description: "Whether to extract images from the document",				
+			},
+			{
+				displayName: "Summarize Images",
+				name: "summarizeImages",
+				type: "boolean",
+				default: false,
+				description: "Whether to generate summaries for images using AI",
+			},
+			{
+				displayName: "Property Extraction Schema",
+				name: "propertyExtractionSchema",
+				type: "json",
+				default: '',
+				description: 'A JSON schema defining the properties to extract from the document using Aryn\'s property extraction feature',
 			}
 		]
 	};
@@ -103,9 +172,14 @@ export class Aryn implements INodeType {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
 		const operation = this.getNodeParameter('operation', 0) as string;
-		let responseData;
 
-		const textMode = this.getNodeParameter('textMode', 0) as string;
+		const textMode = this.getNodeParameter('textMode', 0, 'auto') as string;
+		const tableMode = this.getNodeParameter('tableMode', 0, 'none') as string;
+		const outputFormat = this.getNodeParameter('outputFormat', 0, 'json') as string;
+		const extractImages = this.getNodeParameter('extractImages', 0, false) as boolean;
+		const summarizeImages = this.getNodeParameter('summarizeImages', 0, false) as boolean;
+		const propertyExtractionSchema = this.getNodeParameter('propertyExtractionSchema', 0, '') as string;
+
 		// For each item, make an API call to create a contact
 		for (let i = 0; i < items.length; i++) {
 			const binaryPropertyName = this.getNodeParameter('binaryPropertyName', i) as string;
@@ -124,7 +198,21 @@ export class Aryn implements INodeType {
 				filename: binaryData.fileName,
 				contentType: binaryData.mimeType,
 			});
-			formData.append('options', JSON.stringify({ text_mode: textMode }));
+			const optionsObj: {[key: string]: unknown} = {
+				text_mode: textMode,
+				output_format: outputFormat,
+				extract_images: extractImages,
+				summarize_images: summarizeImages,
+			};
+			if (tableMode !== 'none') {
+				optionsObj['table_mode'] = tableMode;
+			}
+			if (propertyExtractionSchema) {
+				optionsObj['property_extraction_options'] = {
+					schema: propertyExtractionSchema
+				};
+			}
+			formData.append('options', JSON.stringify(optionsObj));
 			this.logger.info(`Form Data: ${JSON.stringify(formData)}`);
 			if (operation === 'parse') {
 				// Make HTTP request
@@ -140,7 +228,12 @@ export class Aryn implements INodeType {
 
 				};
 				try {
-					responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'arynApi', options);
+					const responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'arynApi', options);
+					
+					delete responseData.status;
+					delete responseData.status_code;
+					delete responseData.page_count;
+
 					returnData.push(responseData);
 				} catch (error) {
 					if (this.continueOnFail()) {
