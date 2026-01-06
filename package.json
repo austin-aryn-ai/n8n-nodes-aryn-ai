@@ -1,11 +1,24 @@
 {
   "name": "@aryn-ai/n8n-nodes-aryn",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "n8n community node for Aryn API",
   "license": "MIT",
   "homepage": "",
-  "keywords": ["n8n-community-node-package"],
-  "author": { "name": "Austin Lee", "email": "austin@aryn.ai" },
+  "keywords": [
+    "n8n-community-node-package",
+    "aryn",
+    "n8n",
+    "ai",
+    "genai",
+    "rag",
+    "document-parsing",
+    "table-extraction",
+    "property-extraction"
+  ],
+  "author": {
+    "name": "Austin Lee",
+    "email": "austin@aryn.ai"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/aryn-ai/n8n-nodes-aryn.git"
@@ -19,12 +32,18 @@
     "release": "n8n-node release",
     "prepublishOnly": "n8n-node prerelease"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "n8n": {
     "n8nNodesApiVersion": 1,
     "strict": false,
-    "credentials": ["dist/credentials/ArynApi.credentials.js"],
-    "nodes": ["dist/nodes/Aryn/Aryn.node.js"]
+    "credentials": [
+      "dist/credentials/ArynApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/Aryn/Aryn.node.js"
+    ]
   },
   "devDependencies": {
     "@n8n/node-cli": "^0.17.0",
@@ -34,5 +53,10 @@
     "release-it": "^19.0.4",
     "typescript": "5.9.2"
   },
-  "peerDependencies": { "n8n-workflow": "*" }
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }
