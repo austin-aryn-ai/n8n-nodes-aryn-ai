@@ -4,7 +4,17 @@
   "description": "n8n community node for Aryn API",
   "license": "MIT",
   "homepage": "",
-  "keywords": ["n8n-community-node-package"],
+  "keywords": [
+	"n8n-community-node-package",
+	"aryn",
+	"n8n",
+	"ai",
+	"genai",
+	"rag",
+	"document-parsing",
+	"table-extraction",
+	"property-extraction"
+	],
   "author": { "name": "Austin Lee", "email": "austin@aryn.ai" },
   "repository": {
     "type": "git",
@@ -34,5 +44,8 @@
     "release-it": "^19.0.4",
     "typescript": "5.9.2"
   },
-  "peerDependencies": { "n8n-workflow": "*" }
+  "peerDependencies": { "n8n-workflow": "*" },
+  "publishConfig": {
+    "access": "public"
+  }
 }
