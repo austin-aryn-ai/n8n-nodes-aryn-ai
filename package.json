@@ -17,11 +17,12 @@
   ],
   "author": {
     "name": "Austin Lee",
-    "email": "austin@aryn.ai"
+    "email": "austin@aryn.ai",
+	"url": "https://aryn.ai"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/aryn-ai/n8n-nodes-aryn.git"
+    "url": "git+https://github.com/austin-aryn-ai/n8n-nodes-aryn-ai.git"
   },
   "scripts": {
     "build": "n8n-node build",
@@ -33,6 +34,7 @@
     "prepublishOnly": "n8n-node prerelease"
   },
   "files": [
+	"README.md",
     "dist"
   ],
   "n8n": {
