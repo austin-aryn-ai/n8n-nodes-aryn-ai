@@ -1,6 +1,6 @@
 {
   "name": "@aryn-ai/n8n-nodes-aryn",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "n8n community node for Aryn API",
   "license": "MIT",
   "homepage": "",

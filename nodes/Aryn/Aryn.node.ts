@@ -1,4 +1,3 @@
-import FormData from 'form-data';
 import type {
 	IExecuteFunctions,
 	INodeExecutionData,
@@ -6,7 +5,12 @@ import type {
 	INodeTypeDescription,
 	IHttpRequestOptions,
 } from 'n8n-workflow';
-import { BINARY_ENCODING, NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
+import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
+type BinaryBuffer = { length: number };
+declare const Buffer: {
+    from(input: string, encoding: string): BinaryBuffer;
+    concat(chunks: Array<unknown>): BinaryBuffer;
+};
 
 export class Aryn implements INodeType {
 	description: INodeTypeDescription = {
@@ -166,6 +170,7 @@ export class Aryn implements INodeType {
 			}
 		]
 	};
+
 	// The execute method will go here
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		// Handle data coming from previous nodes
@@ -185,19 +190,8 @@ export class Aryn implements INodeType {
 			const binaryPropertyName = this.getNodeParameter('binaryPropertyName', i) as string;
 			const binaryData = this.helpers.assertBinaryData(i, binaryPropertyName);
 
-			let buffer: Buffer;
-			if (binaryData.id) {
-				const stream = await this.helpers.getBinaryStream(binaryData.id);
-				buffer = await this.helpers.binaryToBuffer(stream);
-			} else {
-				buffer = Buffer.from(binaryData.data, BINARY_ENCODING);
-			}
+			const buffer = await this.helpers.getBinaryDataBuffer(i, binaryPropertyName);
 
-			const formData = new FormData();
-			formData.append('file', buffer, {
-				filename: binaryData.fileName,
-				contentType: binaryData.mimeType,
-			});
 			const optionsObj: {[key: string]: unknown} = {
 				text_mode: textMode,
 				output_format: outputFormat,
@@ -212,18 +206,43 @@ export class Aryn implements INodeType {
 					schema: propertyExtractionSchema
 				};
 			}
-			formData.append('options', JSON.stringify(optionsObj));
-			this.logger.info(`Form Data: ${JSON.stringify(formData)}`);
+			const fileName = binaryData.fileName ?? 'file';
+			const mimeType = binaryData.mimeType ?? 'application/octet-stream';
+
+			const optionStr = JSON.stringify(optionsObj);
+
+			// Build multipart/form-data body manually (Drive-like approach without external imports)
+			const boundary = `----n8nFormBoundary${Date.now()}`;
+			const preamble =
+				`--${boundary}\r\n` +
+				`Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
+				`Content-Type: ${mimeType}\r\n\r\n`;
+			const optionsPart =
+				`\r\n--${boundary}\r\n` +
+				`Content-Disposition: form-data; name="options"\r\n` +
+				`Content-Type: text/plain\r\n\r\n` +
+				optionStr;
+			const closing = `\r\n--${boundary}--\r\n`;
+			const bodyBuffer = Buffer.concat([
+				Buffer.from(preamble, 'utf8'),
+				buffer as unknown as BinaryBuffer,
+				Buffer.from(optionsPart, 'utf8'),
+				Buffer.from(closing, 'utf8'),
+			]);
+
+			this.logger.info(`Form Data: ${JSON.stringify(bodyBuffer)}`);
 			if (operation === 'parse') {
 				// Make HTTP request
 				const options: IHttpRequestOptions = {
+					method: 'POST',
+					url: `https://api.aryn.ai/v1/document/partition`,
 					headers: {
 						'Accept': 'application/json',
 						'source': 'n8n',
+						'Content-Type': `multipart/form-data; boundary=${boundary}`,
+						'Content-Length': (bodyBuffer as unknown as BinaryBuffer).length
 					},
-					method: 'POST',
-					body: formData,
-					url: `https://api.aryn.ai/v1/document/partition`,
+					body: bodyBuffer,
 					json: true,
 
 				};
